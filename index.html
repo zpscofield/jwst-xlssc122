@@ -49,14 +49,15 @@
     }
 
     /* Slider container */
-    .slider-wrap { position: relative; width: 100%; aspect-ratio: 1 / 1; /* square by default */ overflow: hidden; border-radius: 12px; }
+    .slider-wrap { position: relative; width: 100%; aspect-ratio: 1 / 1; /* square by default */ overflow: hidden; border-radius: 12px; contain: layout paint size style; }
     .slider-wrap img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; user-select: none; pointer-events: none; }
-    .slider-wrap .top { clip-path: inset(0 calc(100% - var(--split, 50%)) 0 0); -webkit-clip-path: inset(0 calc(100% - var(--split, 50%)) 0 0); will-change: clip-path; }
+    .top-holder { position: absolute; inset: 0; overflow: hidden; width: var(--split, 50%); will-change: width; }
+    .slider-wrap .top { /* inherits absolute positioning from .slider-wrap img */ }
 
     /* Handle */
     .handle { position: absolute; inset: 0; touch-action: none; }
-    .bar { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,0.7); left: var(--split, 50%); transform: translateX(-1px); }
-    .knob { position: absolute; left: var(--split, 50%); top: 50%; transform: translate(-50%, -50%); width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.3); backdrop-filter: blur(3px); }
+    .bar { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,0.7); left: var(--split, 50%); transform: translateX(-1px); will-change: left; }
+    .knob { position: absolute; left: var(--split, 50%); top: 50%; transform: translate(-50%, -50%); width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.3); backdrop-filter: blur(3px); will-change: left; }
     .chev { width: 0; height: 0; border-top: 8px solid transparent; border-bottom: 8px solid transparent; }
     .chev.left { border-right: 10px solid #fff; margin-right: 10px; }
     .chev.right { border-left: 10px solid #fff; margin-left: 10px; }
@@ -98,7 +99,7 @@
         <!-- Bottom image (e.g., HST) -->
         <img src="assets/hst_xlssc.png" alt="HST color image" loading="lazy" decoding="async" draggable="false" class="bottom" />
         <!-- Top image (e.g., JWST) with clip that changes on drag -->
-        <img src="assets/jwst_xlssc.png" alt="JWST color image" loading="lazy" decoding="async" draggable="false" class="top" />
+        <div class="top-holder"><img src="assets/jwst_xlssc.png" alt="JWST color image" loading="lazy" decoding="async" draggable="false" class="top" /></div>
         <div class="handle" aria-hidden="true">
           <div class="bar"></div>
           <div class="knob" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="Image comparison slider">
@@ -172,59 +173,43 @@
   </footer>
 
   <script>
-  // Robust slider using Pointer Events and a CSS variable for cross-browser support
-  (function() {
+  (function(){
     const wrap = document.getElementById('slider');
-    const topImg = wrap.querySelector('.top');
+    const knob = wrap.querySelector('.knob');
     const bottomImg = wrap.querySelector('.bottom');
+    const topImg = wrap.querySelector('.top');
 
-    function setSplitFromClientX(clientX) {
-      const rect = wrap.getBoundingClientRect();
-      const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
-      const p = x / rect.width; // 0..1
-      const pct = (p * 100).toFixed(3) + '%';
-      wrap.style.setProperty('--split', pct);
-      // Also set explicit clip-path for browsers that don't yet resolve CSS vars in clip-path
-      const clipRight = (100 - p * 100) + '%';
-      topImg.style.clipPath = 'inset(0 ' + clipRight + ' 0 0)';
-      topImg.style.webkitClipPath = 'inset(0 ' + clipRight + ' 0 0)';
+    function setSplitByClientX(x){
+      const r = wrap.getBoundingClientRect();
+      const p = Math.max(0, Math.min(1, (x - r.left) / r.width));
+      wrap.style.setProperty('--split', (p * 100).toFixed(3) + '%');
     }
 
-    // Initialize at 50%
-    requestAnimationFrame(() => {
-      const rect = wrap.getBoundingClientRect();
-      setSplitFromClientX(rect.left + rect.width / 2);
+    // init center
+    requestAnimationFrame(()=>{
+      const r = wrap.getBoundingClientRect();
+      setSplitByClientX(r.left + r.width/2);
     });
 
     let dragging = false;
+    let lastX = 0;
+    let raf = null;
 
-    function onPointerMove(e) {
-      if (!dragging) return;
-      setSplitFromClientX(e.clientX);
+    function schedule(){
+      if(raf) return;
+      raf = requestAnimationFrame(()=>{ setSplitByClientX(lastX); raf = null; });
     }
 
-    function onPointerDown(e) {
-      dragging = true;
-      wrap.setPointerCapture(e.pointerId);
-      setSplitFromClientX(e.clientX);
-    }
+    wrap.addEventListener('pointerdown', (e)=>{ dragging = true; wrap.setPointerCapture(e.pointerId); lastX = e.clientX; schedule(); });
+    wrap.addEventListener('pointermove', (e)=>{ if(!dragging) return; lastX = e.clientX; schedule(); });
+    wrap.addEventListener('pointerup', (e)=>{ dragging = false; wrap.releasePointerCapture(e.pointerId); });
 
-    function onPointerUp(e) {
-      dragging = false;
-      wrap.releasePointerCapture(e.pointerId);
-    }
-
-    wrap.addEventListener('pointerdown', onPointerDown);
-    wrap.addEventListener('pointermove', onPointerMove);
-    wrap.addEventListener('pointerup', onPointerUp);
-    // Visible error if an image path is wrong (common on GitHub Pages due to case sensitivity)
+    // Image path error helper
     function showErr(msg){ var el=document.getElementById('img-error'); if(el){ el.textContent=msg; el.style.display='block'; } }
     bottomImg.addEventListener('error', ()=> showErr('Missing: assets/hst_xlssc.png — check path and filename case.'));
     topImg.addEventListener('error', ()=> showErr('Missing: assets/jwst_xlssc.png — check path and filename case.'));
-    window.addEventListener('resize', () => {
-      const rect = wrap.getBoundingClientRect();
-      setSplitFromClientX(rect.left + rect.width / 2);
-    });
+
+    window.addEventListener('resize', ()=>{ const r = wrap.getBoundingClientRect(); setSplitByClientX(r.left + r.width/2); });
   })();
 </script>
 </body>
