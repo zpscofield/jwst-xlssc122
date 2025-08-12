@@ -51,10 +51,10 @@
     /* Slider container */
     .slider-wrap { position: relative; width: 100%; aspect-ratio: 1 / 1; /* square by default */ overflow: hidden; border-radius: 12px; }
     .slider-wrap img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; user-select: none; pointer-events: none; }
-    .slider-wrap .top { clip-path: inset(0 calc(100% - var(--split, 50%)) 0 0); -webkit-clip-path: inset(0 calc(100% - var(--split, 50%)) 0 0); transition: clip-path 0.06s linear; }
+    .slider-wrap .top { clip-path: inset(0 calc(100% - var(--split, 50%)) 0 0); -webkit-clip-path: inset(0 calc(100% - var(--split, 50%)) 0 0); will-change: clip-path; }
 
     /* Handle */
-    .handle { position: absolute; inset: 0; }
+    .handle { position: absolute; inset: 0; touch-action: none; }
     .bar { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,0.7); left: var(--split, 50%); transform: translateX(-1px); }
     .knob { position: absolute; left: var(--split, 50%); top: 50%; transform: translate(-50%, -50%); width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.3); backdrop-filter: blur(3px); }
     .chev { width: 0; height: 0; border-top: 8px solid transparent; border-bottom: 8px solid transparent; }
@@ -96,9 +96,9 @@
       <h2 id="slider-title" class="small" style="margin:0 0 8px 6px; color:var(--muted);">Image Comparison</h2>
       <div class="slider-wrap" id="slider">
         <!-- Bottom image (e.g., HST) -->
-        <img src="assets/hst_xlssc.png" alt="HST color image" loading="lazy" class="bottom" />
+        <img src="assets/hst_xlssc.png" alt="HST color image" loading="lazy" decoding="async" draggable="false" class="bottom" />
         <!-- Top image (e.g., JWST) with clip that changes on drag -->
-        <img src="assets/jwst_xlssc.png" alt="JWST color image" loading="lazy" class="top" />
+        <img src="assets/jwst_xlssc.png" alt="JWST color image" loading="lazy" decoding="async" draggable="false" class="top" />
         <div class="handle" aria-hidden="true">
           <div class="bar"></div>
           <div class="knob" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="Image comparison slider">
