@@ -75,6 +75,9 @@
     footer { max-width: 1100px; margin: 0 auto; padding: 28px 20px 60px; color: var(--muted); font-size: 14px; }
     .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
     .small { font-size: 13px; color: var(--muted); }
+    /* Intro fade-in for hero + slider */
+    .intro { opacity: 0; transform: translateY(10px); transition: opacity 500ms ease, transform 500ms ease; transition-delay: var(--delay, 0ms); }
+    .intro.show { opacity: 1; transform: none; }
   .reveal { opacity: 0; transform: translateY(12px); transition: opacity 420ms ease, transform 420ms ease; }
     .reveal.visible { opacity: 1; transform: none; }
     @media (prefers-reduced-motion: reduce) {
@@ -95,12 +98,12 @@
   </header>
 
   <main>
-    <section class="hero">
+    <section class="hero intro" style="--delay: 80ms;">
       <h1>Slide to compare <strong>HST</strong> and <strong>JWST</strong></h1>
       <p>Use the handle to sweep between the legacy HST color image and our JWST color composite. Full-resolution data and catalogs are linked below.</p>
     </section>
 
-    <section class="card" aria-labelledby="slider-title">
+    <section class="card intro" aria-labelledby="slider-title" style="--delay: 160ms;">
       <h2 id="slider-title" class="small" style="margin:0 0 8px 6px; color:var(--muted);">Image Comparison</h2>
       <div class="slider-wrap" id="slider">
         <!-- Bottom image (e.g., HST) -->
@@ -265,6 +268,15 @@
     });
   }, { threshold: 0.15, rootMargin: '0px 0px -10% 0px' });
   items.forEach(el => io.observe(el));
+})();
+
+// Intro fade-in on load (separate from scroll reveals)
+(function(){
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function show(){ document.querySelectorAll('.intro').forEach(el => el.classList.add('show')); }
+  if (prefersReduced) { show(); return; }
+  if (document.readyState === 'complete') show();
+  else window.addEventListener('load', show);
 })();
 </script>
 </body>
