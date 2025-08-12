@@ -51,13 +51,13 @@
     /* Slider container */
     .slider-wrap { position: relative; width: 100%; aspect-ratio: 1 / 1; /* square by default */ overflow: hidden; border-radius: 12px; contain: layout paint size style; }
     .slider-wrap img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; user-select: none; pointer-events: none; }
-    .top-holder { position: absolute; inset: 0; overflow: hidden; width: 100%; }
+    .top-holder {}
     .slider-wrap .top { clip-path: inset(0 calc(100% - var(--split, 50%)) 0 0); -webkit-clip-path: inset(0 calc(100% - var(--split, 50%)) 0 0); will-change: clip-path; }
 
     /* Handle */
     .handle { position: absolute; inset: 0; touch-action: none; }
-    .bar { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,0.7); left: var(--split, 50%); transform: translateX(-1px); will-change: left; }
-    .knob { position: absolute; left: var(--split, 50%); top: 50%; transform: translate(-50%, -50%); width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.3); backdrop-filter: blur(3px); will-change: left; }
+    .bar { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,0.7); left: 50%; transform: translateX(-1px); will-change: left; }
+    .knob { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.3); backdrop-filter: blur(3px); will-change: left; }
     .chev { width: 0; height: 0; border-top: 8px solid transparent; border-bottom: 8px solid transparent; }
     .chev.left { border-right: 10px solid #fff; margin-right: 10px; }
     .chev.right { border-left: 10px solid #fff; margin-left: 10px; }
@@ -99,7 +99,7 @@
         <!-- Bottom image (e.g., HST) -->
         <img src="assets/hst_xlssc.png" alt="HST color image" loading="eager" decoding="sync" draggable="false" class="bottom" />
         <!-- Top image (e.g., JWST) with clip that changes on drag -->
-        <div class="top-holder"><img src="assets/jwst_xlssc.png" alt="JWST color image" loading="eager" decoding="sync" draggable="false" class="top" /></div>
+        <img src="assets/jwst_xlssc.png" alt="JWST color image" loading="eager" decoding="sync" draggable="false" class="top" />
         <div class="handle" aria-hidden="true">
           <div class="bar"></div>
           <div class="knob" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="Image comparison slider">
@@ -173,44 +173,55 @@
   </footer>
 
   <script>
-  (function(){
-    const wrap = document.getElementById('slider');
-    const knob = wrap.querySelector('.knob');
-    const bottomImg = wrap.querySelector('.bottom');
-    const topImg = wrap.querySelector('.top');
+(function(){
+  const wrap = document.getElementById('slider');
+  const topImg = wrap.querySelector('.top');
+  const bottomImg = wrap.querySelector('.bottom');
+  const bar = wrap.querySelector('.bar');
+  const knob = wrap.querySelector('.knob');
 
-    function setSplitByClientX(x){
-      const r = wrap.getBoundingClientRect();
-      const p = Math.max(0, Math.min(1, (x - r.left) / r.width));
-      wrap.style.setProperty('--split', (p * 100).toFixed(3) + '%');
-    }
+  // Ensure both images are decoded before first paint
+  const decoders = [];
+  if (bottomImg.decode) decoders.push(bottomImg.decode().catch(()=>{}));
+  if (topImg.decode) decoders.push(topImg.decode().catch(()=>{}));
 
-    // init center
-    requestAnimationFrame(()=>{
-      const r = wrap.getBoundingClientRect();
-      setSplitByClientX(r.left + r.width/2);
-    });
+  function setSplitFromClientX(clientX){
+    const r = wrap.getBoundingClientRect();
+    const x = Math.max(0, Math.min(clientX - r.left, r.width));
+    const p = x / r.width; // 0..1
+    const pct = (p * 100) + '%';
+    const clipRight = (100 - p * 100) + '%';
+    // Move handle
+    bar.style.left = pct;
+    knob.style.left = pct;
+    // Reveal top image without moving it (only clip)
+    topImg.style.clipPath = 'inset(0 ' + clipRight + ' 0 0)';
+    topImg.style.webkitClipPath = 'inset(0 ' + clipRight + ' 0 0)';
+    knob.setAttribute('aria-valuenow', Math.round(p * 100));
+  }
 
-    let dragging = false;
-    let lastX = 0;
-    let raf = null;
+  function init(){
+    const r = wrap.getBoundingClientRect();
+    setSplitFromClientX(r.left + r.width/2);
+  }
 
-    function schedule(){
-      if(raf) return;
-      raf = requestAnimationFrame(()=>{ setSplitByClientX(lastX); raf = null; });
-    }
+  Promise.all(decoders).finally(init);
 
-    wrap.addEventListener('pointerdown', (e)=>{ dragging = true; wrap.setPointerCapture(e.pointerId); lastX = e.clientX; schedule(); });
-    wrap.addEventListener('pointermove', (e)=>{ if(!dragging) return; lastX = e.clientX; schedule(); });
-    wrap.addEventListener('pointerup', (e)=>{ dragging = false; wrap.releasePointerCapture(e.pointerId); });
+  // Pointer events for snappy drag with capture
+  wrap.addEventListener('pointerdown', (e)=>{
+    wrap.setPointerCapture(e.pointerId);
+    setSplitFromClientX(e.clientX);
+  });
+  wrap.addEventListener('pointermove', (e)=>{
+    if (!wrap.hasPointerCapture(e.pointerId)) return;
+    setSplitFromClientX(e.clientX);
+  });
+  wrap.addEventListener('pointerup', (e)=>{
+    if (wrap.hasPointerCapture(e.pointerId)) wrap.releasePointerCapture(e.pointerId);
+  });
 
-    // Image path error helper
-    function showErr(msg){ var el=document.getElementById('img-error'); if(el){ el.textContent=msg; el.style.display='block'; } }
-    bottomImg.addEventListener('error', ()=> showErr('Missing: assets/hst_xlssc.png — check path and filename case.'));
-    topImg.addEventListener('error', ()=> showErr('Missing: assets/jwst_xlssc.png — check path and filename case.'));
-
-    window.addEventListener('resize', ()=>{ const r = wrap.getBoundingClientRect(); setSplitByClientX(r.left + r.width/2); });
-  })();
+  window.addEventListener('resize', init);
+})();
 </script>
 </body>
 </html>
