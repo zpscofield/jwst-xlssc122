@@ -97,9 +97,9 @@
       <h2 id="slider-title" class="small" style="margin:0 0 8px 6px; color:var(--muted);">Image Comparison</h2>
       <div class="slider-wrap" id="slider">
         <!-- Bottom image (e.g., HST) -->
-        <img src="assets/hst_xlssc.png" alt="HST color image" loading="lazy" decoding="async" draggable="false" class="bottom" />
+        <img src="assets/hst_xlssc.png" alt="HST color image" loading="eager" decoding="sync" draggable="false" class="bottom" />
         <!-- Top image (e.g., JWST) with clip that changes on drag -->
-        <div class="top-holder"><img src="assets/jwst_xlssc.png" alt="JWST color image" loading="lazy" decoding="async" draggable="false" class="top" /></div>
+        <div class="top-holder"><img src="assets/jwst_xlssc.png" alt="JWST color image" loading="eager" decoding="sync" draggable="false" class="top" /></div>
         <div class="handle" aria-hidden="true">
           <div class="bar"></div>
           <div class="knob" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="Image comparison slider">
