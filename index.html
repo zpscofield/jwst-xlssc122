@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JWST Data Release – Image Comparison</title>
+  <meta name="description" content="Side‑by‑side HST ↔ JWST image comparison and links to the public data release (Zenodo / University)." />
+  <meta property="og:title" content="JWST Data Release – Image Comparison" />
+  <meta property="og:description" content="Slide between HST and JWST color images and access the full data release." />
+  <meta property="og:type" content="website" />
+  <meta name="color-scheme" content="light dark">
+  <style>
+    :root {
+      --bg: #0b0d10;
+      --card: #11151a;
+      --text: #e6edf3;
+      --muted: #9fb0c0;
+      --accent: #6fb1ff;
+      --border: #1f2630;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Noto Sans, "Apple Color Emoji", "Segoe UI Emoji";
+      background: linear-gradient(180deg, #0a0c10, #0b0d10 60%);
+      color: var(--text);
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    header {
+      max-width: 1100px; margin: 0 auto; padding: 28px 20px 10px;
+      display: flex; gap: 12px; align-items: center; justify-content: space-between;
+    }
+    .brand { font-weight: 700; letter-spacing: 0.2px; }
+    .tag { color: var(--muted); font-size: 14px; }
+
+    main { max-width: 1100px; margin: 0 auto; padding: 16px 20px 80px; }
+
+    .hero {
+      display: grid; gap: 10px; margin: 8px 0 18px;
+    }
+    .hero h1 { margin: 0; font-size: clamp(22px, 3.6vw, 34px); }
+    .hero p { margin: 0; color: var(--muted); max-width: 70ch; }
+
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 14px; box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+    }
+
+    /* Slider container */
+    .slider-wrap { position: relative; width: 100%; aspect-ratio: 1 / 1; /* square by default */ overflow: hidden; border-radius: 12px; }
+    .slider-wrap img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; user-select: none; pointer-events: none; }
+    .slider-wrap .top { clip-path: inset(0 50% 0 0); /* initial 50/50 split */ transition: clip-path 0.06s linear; }
+
+    /* Handle */
+    .handle { position: absolute; inset: 0; }
+    .bar { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,0.7); left: 50%; transform: translateX(-1px); }
+    .knob { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+            width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center;
+            background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.3); backdrop-filter: blur(3px); }
+    .chev { width: 0; height: 0; border-top: 8px solid transparent; border-bottom: 8px solid transparent; }
+    .chev.left { border-right: 10px solid #fff; margin-right: 10px; }
+    .chev.right { border-left: 10px solid #fff; margin-left: 10px; }
+
+    .labels { display: flex; justify-content: space-between; margin-top: 8px; font-size: 14px; color: var(--muted); }
+    .labels span { background: rgba(255,255,255,0.04); border: 1px solid var(--border); padding: 6px 10px; border-radius: 999px; }
+
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: #0d1218; color: var(--text); }
+    .btn:hover { filter: brightness(1.05); }
+
+    footer { max-width: 1100px; margin: 0 auto; padding: 28px 20px 60px; color: var(--muted); font-size: 14px; }
+    .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+    .small { font-size: 13px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <div class="brand">JWST / HST Data Release</div>
+      <div class="tag">Cluster Field – Color Composite</div>
+    </div>
+    <nav class="small">
+      <a href="#data">Data</a> · <a href="#cite">Cite</a> · <a href="#about">About</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h1>Slide to compare <strong>HST</strong> and <strong>JWST</strong></h1>
+      <p>Use the handle to sweep between the legacy HST color image and our JWST color composite. Full-resolution data and catalogs are linked below.</p>
+    </section>
+
+    <section class="card" aria-labelledby="slider-title">
+      <h2 id="slider-title" class="small" style="margin:0 0 8px 6px; color:var(--muted);">Image Comparison</h2>
+      <div class="slider-wrap" id="slider">
+        <!-- Bottom image (e.g., HST) -->
+        <img src="assets/hst_color.jpg" alt="HST color image" loading="lazy" class="bottom" />
+        <!-- Top image (e.g., JWST) with clip that changes on drag -->
+        <img src="assets/jwst_color.jpg" alt="JWST color image" loading="lazy" class="top" />
+        <div class="handle" aria-hidden="true">
+          <div class="bar"></div>
+          <div class="knob" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="Image comparison slider">
+            <div style="display:flex; align-items:center;">
+              <div class="chev left"></div>
+              <div class="chev right"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="labels"><span>HST</span><span>JWST</span></div>
+      <div class="actions">
+        <a class="btn" id="download-hst" href="assets/hst_color.jpg" download>Download HST preview</a>
+        <a class="btn" id="download-jwst" href="assets/jwst_color.jpg" download>Download JWST preview</a>
+        <a class="btn" href="#data">Go to data release ↓</a>
+      </div>
+    </section>
+
+    <section id="data" class="card" style="margin-top:16px;">
+      <h2 style="margin:4px 0 8px 6px;" class="small">Data Access</h2>
+      <div class="grid">
+        <div>
+          <h3 style="margin:0 0 6px; font-size:16px;">Zenodo / DOI</h3>
+          <p class="small">Primary archive with FITS mosaics, segmentation maps, catalogs, and documentation.</p>
+          <p><a href="https://doi.org/10.0000/zenodo.placeholder" target="_blank" rel="noopener">DOI: 10.0000/zenodo.placeholder</a></p>
+        </div>
+        <div>
+          <h3 style="margin:0 0 6px; font-size:16px;">University Mirror</h3>
+          <p class="small">Institutional mirror for faster downloads in Asia.</p>
+          <p><a href="https://example.edu/jwst-data" target="_blank" rel="noopener">example.edu/jwst-data</a></p>
+        </div>
+        <div>
+          <h3 style="margin:0 0 6px; font-size:16px;">Products</h3>
+          <ul class="small" style="margin: 6px 0 0 16px;">
+            <li>NIRCam mosaics (F090W, F200W, F277W, F356W)</li>
+            <li>HST mosaics (F105W, F140W)</li>
+            <li>Color composites (16‑bit TIFF + JPEG)</li>
+            <li>WL/SL catalogs and region files</li>
+            <li>Release notes (PDF)</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="cite" class="card" style="margin-top:16px;">
+      <h2 style="margin:4px 0 8px 6px;" class="small">How to Cite</h2>
+      <p class="small">Please cite the data DOI and our paper. Example BibTeX:</p>
+<pre class="small" style="white-space:pre-wrap; border:1px solid var(--border); background:#0d1218; padding:10px; border-radius:8px;">
+@dataset{Scofield2025JWSTRelease,
+  author       = {Scofield, Zachary and Collaborators},
+  title        = {JWST Cluster Field Data Release},
+  year         = {2025},
+  publisher    = {Zenodo},
+  doi          = {10.0000/zenodo.placeholder},
+}
+</pre>
+    </section>
+
+    <section id="about" class="card" style="margin-top:16px;">
+      <h2 style="margin:4px 0 8px 6px;" class="small">About</h2>
+      <p class="small">This page is a lightweight, static site designed for GitHub Pages. Images are previews; for scientific work use the FITS files provided in the archive.</p>
+    </section>
+  </main>
+
+  <footer>
+    <div class="grid">
+      <div class="small">© 2025 JWST Data Release Team. Licensed CC BY 4.0 for images and MIT for website code.</div>
+      <div class="small">Contact: <a href="mailto:data-release@example.edu">data-release@example.edu</a></div>
+    </div>
+  </footer>
+
+  <script>
+    // Simple, dependency-free before/after slider
+    (function() {
+      const wrap = document.getElementById("slider");
+      const topImg = wrap.querySelector(".top");
+      const bar = wrap.querySelector(".bar");
+      const knob = wrap.querySelector(".knob");
+
+      const setSplit = (px) => {
+        const rect = wrap.getBoundingClientRect();
+        const x = Math.max(0, Math.min(px - rect.left, rect.width));
+        const p = x / rect.width; // 0..1
+        const clipRight = 100 - p * 100; // percent for right inset
+        topImg.style.clipPath = `inset(0 ${clipRight}% 0 0)`;
+        bar.style.left = `${p * 100}%`;
+        knob.style.left = `${p * 100}%`;
+        knob.setAttribute('aria-valuenow', Math.round(p * 100));
+      };
+
+      // init at 50%
+      setSplit(wrap.getBoundingClientRect().left + wrap.clientWidth / 2);
+
+      let dragging = false;
+
+      const onMove = (e) => {
+        if (!dragging) return;
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        setSplit(clientX);
+      };
+
+      const start = (e) => { dragging = true; onMove(e); e.preventDefault(); };
+      const end = () => dragging = false;
+
+      knob.addEventListener('mousedown', start);
+      wrap.addEventListener('mousedown', start);
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', end);
+
+      knob.addEventListener('touchstart', start, { passive: false });
+      wrap.addEventListener('touchstart', start, { passive: false });
+      window.addEventListener('touchmove', onMove, { passive: false });
+      window.addEventListener('touchend', end);
+
+      // Resize handler keeps split consistent when layout changes
+      window.addEventListener('resize', () => {
+        // Re-center on resize; could store last p if desired
+        setSplit(wrap.getBoundingClientRect().left + wrap.clientWidth / 2);
+      });
+    })();
+  </script>
+</body>
+</html>
