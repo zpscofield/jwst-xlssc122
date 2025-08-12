@@ -51,19 +51,19 @@
     /* Slider container */
     .slider-wrap { position: relative; width: 100%; aspect-ratio: 1 / 1; /* square by default */ overflow: hidden; border-radius: 12px; }
     .slider-wrap img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; user-select: none; pointer-events: none; }
-    .slider-wrap .top { clip-path: inset(0 50% 0 0); /* initial 50/50 split */ transition: clip-path 0.06s linear; }
+    .slider-wrap .top { clip-path: inset(0 calc(100% - var(--split, 50%)) 0 0); -webkit-clip-path: inset(0 calc(100% - var(--split, 50%)) 0 0); transition: clip-path 0.06s linear; }
 
     /* Handle */
     .handle { position: absolute; inset: 0; }
-    .bar { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,0.7); left: 50%; transform: translateX(-1px); }
-    .knob { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-            width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center;
-            background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.3); backdrop-filter: blur(3px); }
+    .bar { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,0.7); left: var(--split, 50%); transform: translateX(-1px); }
+    .knob { position: absolute; left: var(--split, 50%); top: 50%; transform: translate(-50%, -50%); width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.3); backdrop-filter: blur(3px); }
     .chev { width: 0; height: 0; border-top: 8px solid transparent; border-bottom: 8px solid transparent; }
     .chev.left { border-right: 10px solid #fff; margin-right: 10px; }
     .chev.right { border-left: 10px solid #fff; margin-left: 10px; }
 
     .labels { display: flex; justify-content: space-between; margin-top: 8px; font-size: 14px; color: var(--muted); }
+    .labels span { background: rgba(255,255,255,0.04); border: 1px solid var(--border); padding: 6px 10px; border-radius: 999px; }
+    .err { display:none; margin-top:10px; padding:8px 10px; border-radius:8px; border:1px solid #553; background:#221; color:#f8d7da; font-size:13px; }
     .labels span { background: rgba(255,255,255,0.04); border: 1px solid var(--border); padding: 6px 10px; border-radius: 999px; }
 
     .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
@@ -110,6 +110,7 @@
         </div>
       </div>
       <div class="labels"><span>HST</span><span>JWST</span></div>
+      <div id="img-error" class="err">Image failed to load. Ensure the files exist at <code>assets/hst_xlssc.png</code> and <code>assets/jwst_xlssc.png</code> (case‑sensitive).</div>
       <div class="actions">
         <a class="btn" id="download-hst" href="assets/hst_xlssc.png" download>Download HST preview</a>
         <a class="btn" id="download-jwst" href="assets/jwst_xlssc.png" download>Download JWST preview</a>
@@ -171,54 +172,60 @@
   </footer>
 
   <script>
-    // Simple, dependency-free before/after slider
-    (function() {
-      const wrap = document.getElementById("slider");
-      const topImg = wrap.querySelector(".top");
-      const bar = wrap.querySelector(".bar");
-      const knob = wrap.querySelector(".knob");
+  // Robust slider using Pointer Events and a CSS variable for cross-browser support
+  (function() {
+    const wrap = document.getElementById('slider');
+    const topImg = wrap.querySelector('.top');
+    const bottomImg = wrap.querySelector('.bottom');
 
-      const setSplit = (px) => {
-        const rect = wrap.getBoundingClientRect();
-        const x = Math.max(0, Math.min(px - rect.left, rect.width));
-        const p = x / rect.width; // 0..1
-        const clipRight = 100 - p * 100; // percent for right inset
-        topImg.style.clipPath = `inset(0 ${clipRight}% 0 0)`;
-        bar.style.left = `${p * 100}%`;
-        knob.style.left = `${p * 100}%`;
-        knob.setAttribute('aria-valuenow', Math.round(p * 100));
-      };
+    function setSplitFromClientX(clientX) {
+      const rect = wrap.getBoundingClientRect();
+      const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+      const p = x / rect.width; // 0..1
+      const pct = (p * 100).toFixed(3) + '%';
+      wrap.style.setProperty('--split', pct);
+      // Also set explicit clip-path for browsers that don't yet resolve CSS vars in clip-path
+      const clipRight = (100 - p * 100) + '%';
+      topImg.style.clipPath = 'inset(0 ' + clipRight + ' 0 0)';
+      topImg.style.webkitClipPath = 'inset(0 ' + clipRight + ' 0 0)';
+    }
 
-      // init at 50%
-      setSplit(wrap.getBoundingClientRect().left + wrap.clientWidth / 2);
+    // Initialize at 50%
+    requestAnimationFrame(() => {
+      const rect = wrap.getBoundingClientRect();
+      setSplitFromClientX(rect.left + rect.width / 2);
+    });
 
-      let dragging = false;
+    let dragging = false;
 
-      const onMove = (e) => {
-        if (!dragging) return;
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        setSplit(clientX);
-      };
+    function onPointerMove(e) {
+      if (!dragging) return;
+      setSplitFromClientX(e.clientX);
+    }
 
-      const start = (e) => { dragging = true; onMove(e); e.preventDefault(); };
-      const end = () => dragging = false;
+    function onPointerDown(e) {
+      dragging = true;
+      wrap.setPointerCapture(e.pointerId);
+      setSplitFromClientX(e.clientX);
+    }
 
-      knob.addEventListener('mousedown', start);
-      wrap.addEventListener('mousedown', start);
-      window.addEventListener('mousemove', onMove);
-      window.addEventListener('mouseup', end);
+    function onPointerUp(e) {
+      dragging = false;
+      wrap.releasePointerCapture(e.pointerId);
+    }
 
-      knob.addEventListener('touchstart', start, { passive: false });
-      wrap.addEventListener('touchstart', start, { passive: false });
-      window.addEventListener('touchmove', onMove, { passive: false });
-      window.addEventListener('touchend', end);
-
-      // Resize handler keeps split consistent when layout changes
-      window.addEventListener('resize', () => {
-        // Re-center on resize; could store last p if desired
-        setSplit(wrap.getBoundingClientRect().left + wrap.clientWidth / 2);
-      });
-    })();
-  </script>
+    wrap.addEventListener('pointerdown', onPointerDown);
+    wrap.addEventListener('pointermove', onPointerMove);
+    wrap.addEventListener('pointerup', onPointerUp);
+    // Visible error if an image path is wrong (common on GitHub Pages due to case sensitivity)
+    function showErr(msg){ var el=document.getElementById('img-error'); if(el){ el.textContent=msg; el.style.display='block'; } }
+    bottomImg.addEventListener('error', ()=> showErr('Missing: assets/hst_xlssc.png — check path and filename case.'));
+    topImg.addEventListener('error', ()=> showErr('Missing: assets/jwst_xlssc.png — check path and filename case.'));
+    window.addEventListener('resize', () => {
+      const rect = wrap.getBoundingClientRect();
+      setSplitFromClientX(rect.left + rect.width / 2);
+    });
+  })();
+</script>
 </body>
 </html>
